@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lockin - Preferred Units</title>
+</head>
+<body>
+    <h1>Preferred Units</h1>
+    <form method="POST">
+        <p>Which units of measurement do you prefer?</p>
+        <label>
+            <input type="radio" name="units" value="us_standard" required>
+            US Standard
+        </label><br>
+        <label>
+            <input type="radio" name="units" value="metric">
+            Metric
+        </label><br>
+
+        <p>Preferred unit of energy:</p>
+        <select name="energy_unit">
+            <option value="calories">Calories</option>
+            <option value="kilojoules">Kilojoules</option>
+        </select><br>
+
+        <button type="submit">Next</button>
+    </form>
+</body>
+</html>

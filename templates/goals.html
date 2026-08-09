@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lockin - Goals</title>
+</head>
+<body>
+    <h1>What is your goal?</h1>
+    <form method="POST">
+        <p><strong>General Goal</strong></p>
+        <label><input type="radio" name="goal_mode" value="general" required> Choose a general goal</label><br>
+        <select name="general_goal">
+            <option value="lose_weight">Lose weight</option>
+            <option value="lose_fat">Lose fat</option>
+            <option value="maintain_weight">Maintain weight</option>
+            <option value="build_muscle">Build muscle</option>
+        </select><br><br>
+
+        <p><strong>Exact Goal</strong></p>
+        <label><input type="radio" name="goal_mode" value="exact"> Set an exact goal</label><br>
+        <label>Goal weight (kg):</label>
+        <input type="number" name="goal_weight" step="0.1"><br>
+        <label>Weight change rate (kg/week):</label>
+        <input type="number" name="weekly_rate" step="0.01"><br>
+
+        <button type="submit">Next</button>
+    </form>
+</body>
+</html>

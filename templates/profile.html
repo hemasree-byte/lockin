@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lockin - Physical Profile</title>
+</head>
+<body>
+    <h1>Physical Profile</h1>
+    <p>We use this to estimate your RMR (Resting Metabolic Rate) and set your nutrition budget.</p>
+    <form method="POST">
+        <label>Height (cm):</label>
+        <input type="number" name="height" step="0.1" required><br>
+
+        <label>Weight (kg):</label>
+        <input type="number" name="weight" step="0.1" required><br>
+
+        <label>Age:</label>
+        <input type="number" name="age" required><br>
+
+        <p>Biological Sex:</p>
+        <label><input type="radio" name="sex" value="female" required> Female</label><br>
+        <label><input type="radio" name="sex" value="male"> Male</label><br>
+        <label><input type="radio" name="sex" value="other"> Other</label><br>
+
+        <p>Body Fat Level:</p>
+        <label><input type="radio" name="body_fat" value="low" required> Low</label><br>
+        <label><input type="radio" name="body_fat" value="medium"> Medium</label><br>
+        <label><input type="radio" name="body_fat" value="high"> High</label><br>
+
+        <button type="submit">Next</button>
+    </form>
+</body>
+</html>
