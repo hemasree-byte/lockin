@@ -1,0 +1,39 @@
+FLOWCHART OF THE PROJECT :-
+
+                              START
+                                ↓
+                       User visits LOCKIN
+                                ↓
+                         Sign Up / Login
+                                ↓
+                         Profile Setup
+                                ↓
+                           Set Goals
+                                ↓
+                        LOCKIN Dashboard
+                                ↓
+        ┌─────────────────────────────────────────────┐
+        ↓                       ↓                     ↓
+      HEALTH                  FINANCE              ETIQUETTES
+        ↓                       ↓                     ↓
+ Health Preferences        Finance Setup        Select Scenario
+        ↓                       ↓                     ↓
+ Diet                      Accounts             Social
+ Allergies                 Transactions         Workplace
+ Activity                  Dashboard            Digital
+ Goals                         ↓                 Dining
+        ↓                  Allocation            Everyday
+ Rule-Based                    ↓                     ↓
+ Meal Matching             5 Buckets             Guidance
+        ↓                       ↓                     ↓
+ Recommended              Calculators           Do / Avoid
+ Meals                                          Example
+        └───────────────────────┬─────────────────────┘
+                                ↓
+                    Store / Retrieve
+                       Data in SQLite
+                                ↓
+                Display Personalized
+                    Results to the User
+                                ↓
+                              END

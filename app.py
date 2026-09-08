@@ -37,7 +37,17 @@ def units():
     if request.method == 'POST':
         preferred_units = request.form.get('units')
         energy_unit = request.form.get('energy_unit')
-        print(f"Units: {preferred_units}, Energy unit: {energy_unit}")
+        user_id = session.get('user_id')
+
+        connection = sqlite3.connect('database.db')
+        cursor = connection.cursor()
+        cursor.execute(
+            "INSERT INTO physical_profile (user_id, preferred_units, preferred_energy_unit) VALUES (?, ?, ?)",
+            (user_id, preferred_units, energy_unit)
+        )
+        connection.commit()
+        connection.close()
+
         return redirect(url_for('profile'))
 
     return render_template('units.html')
@@ -51,7 +61,17 @@ def profile():
         age = request.form.get('age')
         sex = request.form.get('sex')
         body_fat = request.form.get('body_fat')
-        print(f"Profile: {height}cm, {weight}kg, age {age}, {sex}, body fat {body_fat}")
+        user_id = session.get('user_id')
+
+        connection = sqlite3.connect('database.db')
+        cursor = connection.cursor()
+        cursor.execute(
+            "UPDATE physical_profile SET height_cm = ?, weight_kg = ?, age = ?, biological_sex = ?, body_fat_level = ? WHERE user_id = ?",
+            (height, weight, age, sex, body_fat, user_id)
+        )
+        connection.commit()
+        connection.close()
+
         return redirect(url_for('goals'))
 
     return render_template('profile.html')
@@ -65,22 +85,32 @@ def goals():
         general_goal = request.form.get('general_goal')
         goal_weight = request.form.get('goal_weight')
         weekly_rate = request.form.get('weekly_rate')
+        user_id = session.get('user_id')
+
+        connection = sqlite3.connect('database.db')
+        cursor = connection.cursor()
+
+        cursor.execute("SELECT weight_kg FROM physical_profile WHERE user_id = ?", (user_id,))
+        result = cursor.fetchone()
+        current_weight = result[0] if result else None
 
         estimated_date = None
-
-        if goal_mode == 'exact' and goal_weight and weekly_rate:
-            # NOTE: this assumes we know the user's CURRENT weight
-            # from the profile page — for now we'll hardcode a
-            # placeholder until we connect it to the database
-            current_weight = 60  # placeholder, replace once DB is connected
+        if goal_mode == 'exact' and goal_weight and weekly_rate and current_weight:
             weight_diff = abs(float(goal_weight) - current_weight)
             weeks_needed = weight_diff / abs(float(weekly_rate))
             estimated_date = date.today() + timedelta(weeks=weeks_needed)
 
-        print(f"Goal mode: {goal_mode}, general: {general_goal}, exact weight: {goal_weight}, rate: {weekly_rate}, est. date: {estimated_date}")
+        cursor.execute(
+            "INSERT INTO user_goals (user_id, goal_mode, general_goal, goal_weight_kg, weekly_rate_kg, estimated_completion_date) VALUES (?, ?, ?, ?, ?, ?)",
+            (user_id, goal_mode, general_goal, goal_weight, weekly_rate, str(estimated_date) if estimated_date else None)
+        )
+        connection.commit()
+        connection.close()
+
         return f"Goal saved! Estimated completion: {estimated_date}" if estimated_date else "Goal saved! (general goal, no date estimate)"
 
     return render_template('goals.html')
+
 
 
 if __name__ == '__main__':

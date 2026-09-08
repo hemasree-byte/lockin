@@ -40,4 +40,4 @@ CREATE TABLE IF NOT EXISTS user_goals (
 connection.commit()
 connection.close()
 
-print("Database and users table created successfully.")
+print("Database and all tables created successfully.")
