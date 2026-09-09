@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lockin - Allergies</title>
+</head>
+<body>
+    <h1>Do you have any of these common allergies?</h1>
+    {% if already_excluded %}
+    <p><em>Some foods are already excluded because you're following a {{ diet_type }} diet.</em></p>
+    {% endif %}
+    <form method="POST">
+        {% for allergen in allergens %}
+            <label>
+                <input type="checkbox" name="allergies" value="{{ allergen }}"
+                    {% if allergen in already_excluded %} disabled {% endif %}>
+                {{ allergen|capitalize }}
+                {% if allergen in already_excluded %} (already excluded by your diet) {% endif %}
+            </label><br>
+        {% endfor %}
+        <button type="submit">Next</button>
+    </form>
+</body>
+</html>

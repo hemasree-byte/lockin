@@ -22,7 +22,10 @@ CREATE TABLE IF NOT EXISTS physical_profile (
     weight_kg REAL,
     age INTEGER,
     biological_sex TEXT,
-    body_fat_level TEXT
+    body_fat_level TEXT,
+    activity_level TEXT,
+    diet_type TEXT,
+    allergies TEXT
 )
 ''')
 
@@ -37,7 +40,9 @@ CREATE TABLE IF NOT EXISTS user_goals (
 )
 ''')
 
+
 connection.commit()
 connection.close()
+
 
 print("Database and all tables created successfully.")

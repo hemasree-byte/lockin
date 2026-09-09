@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lockin - Diet Type</title>
+</head>
+<body>
+    <h1>Diet Type</h1>
+    <p>We'll base your meals on this main diet type. Choose "Anything" to customize your own from scratch.</p>
+    <form method="POST">
+        <label>
+            <input type="radio" name="diet_type" value="anything" required>
+            <strong>Anything</strong> — no exclusions
+        </label><br>
+
+        <label>
+            <input type="radio" name="diet_type" value="keto">
+            <strong>Keto</strong> — excludes grains, refined starches, sugar
+        </label><br>
+
+        <label>
+            <input type="radio" name="diet_type" value="vegetarian">
+            <strong>Vegetarian</strong> — excludes red meat, poultry, fish, shellfish
+        </label><br>
+
+        <label>
+            <input type="radio" name="diet_type" value="vegan">
+            <strong>Vegan</strong> — excludes red meat, poultry, fish, shellfish, dairy, eggs, honey
+        </label><br>
+
+        <label>
+            <input type="radio" name="diet_type" value="paleo">
+            <strong>Paleo</strong> — excludes dairy, grains, legumes, refined sugar
+        </label><br>
+
+        <label>
+            <input type="radio" name="diet_type" value="mediterranean">
+            <strong>Mediterranean</strong> — excludes red meat, processed meats, refined sugar
+        </label><br>
+
+        <button type="submit">Next</button>
+    </form>
+</body>
+</html>

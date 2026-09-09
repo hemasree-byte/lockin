@@ -107,9 +107,87 @@ def goals():
         connection.commit()
         connection.close()
 
-        return f"Goal saved! Estimated completion: {estimated_date}" if estimated_date else "Goal saved! (general goal, no date estimate)"
+        return redirect(url_for('activity'))
 
     return render_template('goals.html')
+
+@app.route('/activity', methods=['GET', 'POST'])
+def activity():
+    if request.method == 'POST':
+        activity_level = request.form.get('activity_level')
+        user_id = session.get('user_id')
+
+        connection = sqlite3.connect('database.db')
+        cursor = connection.cursor()
+        cursor.execute(
+            "UPDATE physical_profile SET activity_level = ? WHERE user_id = ?",
+            (activity_level, user_id)
+        )
+        connection.commit()
+        connection.close()
+
+        return redirect(url_for('diet'))
+
+    return render_template('activity.html')
+
+@app.route('/diet', methods=['GET', 'POST'])
+def diet():
+    if request.method == 'POST':
+        diet_type = request.form.get('diet_type')
+        user_id = session.get('user_id')
+
+        connection = sqlite3.connect('database.db')
+        cursor = connection.cursor()
+        cursor.execute(
+            "UPDATE physical_profile SET diet_type = ? WHERE user_id = ?",
+            (diet_type, user_id)
+        )
+        connection.commit()
+        connection.close()
+
+        return redirect(url_for('allergies'))
+
+    return render_template('diet.html')
+
+
+
+DIET_EXCLUSIONS = {
+    'keto': ['gluten'],
+    'vegetarian': ['shellfish'],
+    'vegan': ['dairy', 'eggs', 'shellfish'],
+    'paleo': ['dairy', 'gluten', 'soy'],
+    'mediterranean': [],
+    'anything': []
+}
+
+ALLERGENS = ['dairy', 'eggs', 'gluten', 'peanuts', 'sesame', 'shellfish', 'soy', 'tree nuts']
+
+@app.route('/allergies', methods=['GET', 'POST'])
+def allergies():
+    user_id = session.get('user_id')
+    connection = sqlite3.connect('database.db')
+    cursor = connection.cursor()
+
+    cursor.execute("SELECT diet_type FROM physical_profile WHERE user_id = ?", (user_id,))
+    result = cursor.fetchone()
+    diet_type = result[0] if result else 'anything'
+    already_excluded = DIET_EXCLUSIONS.get(diet_type, [])
+
+    if request.method == 'POST':
+        selected_allergies = request.form.getlist('allergies')
+        allergies_str = ",".join(selected_allergies)
+
+        cursor.execute(
+            "UPDATE physical_profile SET allergies = ? WHERE user_id = ?",
+            (allergies_str, user_id)
+        )
+        connection.commit()
+        connection.close()
+
+        return redirect(url_for('allergies'))
+
+    connection.close()
+    return render_template('allergies.html', allergens=ALLERGENS, already_excluded=already_excluded, diet_type=diet_type)
 
 
 
