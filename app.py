@@ -206,9 +206,45 @@ def meals():
         connection.commit()
         connection.close()
 
-        return "Meals saved! Onboarding flow complete so far."
-
+        return redirect(url_for('meal_preferences', meal_type='breakfast'))
+    
     return render_template('meals.html')
+
+MEAL_CATEGORIES = {
+    'breakfast': ['Shakes & smoothies', 'Oatmeal & cereals', 'Sandwiches & wraps', 'Skillets & hashes', 'Nut/seed & dried fruits', 'High protein snacks'],
+    'lunch': ['Salads & bowls', 'Sandwiches & wraps', 'Soups', 'Rice & grain based', 'High protein'],
+    'dinner': ['One-pot meals', 'Grilled/roasted', 'Soups & stews', 'Rice & grain based', 'High protein'],
+    'snack': ['Fruits & nuts', 'Protein bars/shakes', 'Yogurt based', 'Baked snacks']
+}
+
+MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack']
+
+@app.route('/meal_preferences/<meal_type>', methods=['GET', 'POST'])
+def meal_preferences(meal_type):
+    categories = MEAL_CATEGORIES.get(meal_type, [])
+
+    if request.method == 'POST':
+        family_members = request.form.get('family_members')
+        selected_categories = request.form.getlist('categories')
+        categories_str = ",".join(selected_categories)
+        user_id = session.get('user_id')
+
+        connection = sqlite3.connect('database.db')
+        cursor = connection.cursor()
+        cursor.execute(
+            "INSERT INTO meal_preferences (user_id, meal_type, additional_family_members, preferred_categories) VALUES (?, ?, ?, ?)",
+            (user_id, meal_type, family_members, categories_str)
+        )
+        connection.commit()
+        connection.close()
+
+        current_index = MEAL_ORDER.index(meal_type)
+        if current_index + 1 < len(MEAL_ORDER):
+            next_meal = MEAL_ORDER[current_index + 1]
+            return redirect(url_for('meal_preferences', meal_type=next_meal))
+        else:
+            return "All meal preferences saved! Onboarding flow complete so far."
+    return render_template('meal_preferences.html', meal_type=meal_type, categories=categories)
 
 
 

@@ -40,9 +40,21 @@ CREATE TABLE IF NOT EXISTS user_goals (
 )
 ''')
 
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS meal_preferences (
+    user_id INTEGER REFERENCES users(user_id),
+    meal_type TEXT,
+    additional_family_members INTEGER,
+    preferred_categories TEXT,
+    PRIMARY KEY (user_id, meal_type)
+)
+''')
+
 
 connection.commit()
 connection.close()
 
 
 print("Database and all tables created successfully.")
+
+ 

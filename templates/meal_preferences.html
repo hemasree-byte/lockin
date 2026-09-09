@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lockin - {{ meal_type|capitalize }} Preferences</title>
+</head>
+<body>
+    <h1>{{ meal_type|capitalize }}</h1>
+
+    <form method="POST">
+        <label>Additional family members:</label>
+        <input type="number" name="family_members" min="0" value="0"><br><br>
+
+        <p>Preferred categories:</p>
+        {% for category in categories %}
+            <label>
+                <input type="checkbox" name="categories" value="{{ category }}">
+                {{ category }}
+            </label><br>
+        {% endfor %}
+
+        <button type="submit">Next</button>
+    </form>
+</body>
+</html>
