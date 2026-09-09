@@ -184,10 +184,31 @@ def allergies():
         connection.commit()
         connection.close()
 
-        return redirect(url_for('allergies'))
+        return redirect(url_for('meals'))
 
     connection.close()
     return render_template('allergies.html', allergens=ALLERGENS, already_excluded=already_excluded, diet_type=diet_type)
+
+
+@app.route('/meals', methods=['GET', 'POST'])
+def meals():
+    if request.method == 'POST':
+        selected_meals = request.form.getlist('meals')
+        meals_str = ",".join(selected_meals)
+        user_id = session.get('user_id')
+
+        connection = sqlite3.connect('database.db')
+        cursor = connection.cursor()
+        cursor.execute(
+            "UPDATE physical_profile SET meals = ? WHERE user_id = ?",
+            (meals_str, user_id)
+        )
+        connection.commit()
+        connection.close()
+
+        return "Meals saved! Onboarding flow complete so far."
+
+    return render_template('meals.html')
 
 
 
