@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lockin - Nutrition Targets</title>
+</head>
+<body>
+    <h1>Here are your estimated nutrition targets</h1>
+    <p>You can adjust these here or later in your meal planner settings.</p>
+
+    <form method="POST">
+        <label>Calories (kcal):</label>
+        <input type="number" name="calories" value="{{ calories }}"><br>
+
+        <label>Carbs (g):</label>
+        <input type="number" name="carbs" value="{{ carbs }}"><br>
+
+        <label>Fat (g):</label>
+        <input type="number" name="fat" value="{{ fat }}"><br>
+
+        <label>Protein (g):</label>
+        <input type="number" name="protein" value="{{ protein }}"><br>
+
+        <button type="submit">Next</button>
+    </form>
+</body>
+</html>

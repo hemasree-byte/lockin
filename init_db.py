@@ -50,6 +50,15 @@ CREATE TABLE IF NOT EXISTS meal_preferences (
 )
 ''')
 
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS nutrition_targets (
+    user_id INTEGER PRIMARY KEY REFERENCES users(user_id),
+    calories REAL,
+    carbs_g REAL,
+    fat_g REAL,
+    protein_g REAL
+)
+''')
 
 connection.commit()
 connection.close()

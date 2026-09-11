@@ -243,10 +243,83 @@ def meal_preferences(meal_type):
             next_meal = MEAL_ORDER[current_index + 1]
             return redirect(url_for('meal_preferences', meal_type=next_meal))
         else:
-            return "All meal preferences saved! Onboarding flow complete so far."
+            return redirect(url_for('nutrition_targets'))
     return render_template('meal_preferences.html', meal_type=meal_type, categories=categories)
 
+ACTIVITY_MULTIPLIERS = {
+    'sedentary': 1.2,
+    'lightly_active': 1.375,
+    'moderately_active': 1.55,
+    'very_active': 1.725,
+    'extremely_active': 1.9
+}
 
+@app.route('/nutrition_targets', methods=['GET', 'POST'])
+def nutrition_targets():
+    user_id = session.get('user_id')
+    connection = sqlite3.connect('database.db')
+    cursor = connection.cursor()
+
+    if request.method == 'POST':
+        calories = request.form.get('calories')
+        carbs = request.form.get('carbs')
+        fat = request.form.get('fat')
+        protein = request.form.get('protein')
+
+        cursor.execute(
+            "INSERT INTO nutrition_targets (user_id, calories, carbs_g, fat_g, protein_g) VALUES (?, ?, ?, ?, ?)",
+            (user_id, calories, carbs, fat, protein)
+        )
+        connection.commit()
+        connection.close()
+
+        return "Nutrition targets saved! Onboarding flow complete so far."
+
+    # GET: calculate the estimate
+    cursor.execute(
+        "SELECT height_cm, weight_kg, age, biological_sex, activity_level FROM physical_profile WHERE user_id = ?",
+        (user_id,)
+    )
+    profile = cursor.fetchone()
+    height, weight, age, sex, activity_level = profile
+
+    cursor.execute(
+        "SELECT general_goal, weekly_rate_kg FROM user_goals WHERE user_id = ?",
+        (user_id,)
+    )
+    goal = cursor.fetchone()
+    general_goal, weekly_rate = goal if goal else (None, None)
+    connection.close()
+
+    # Step 1: RMR
+    if sex == 'male':
+        rmr = 10*weight + 6.25*height - 5*age + 5
+    elif sex == 'female':
+        rmr = 10*weight + 6.25*height - 5*age - 161
+    else:
+        rmr = ((10*weight + 6.25*height - 5*age + 5) + (10*weight + 6.25*height - 5*age - 161)) / 2
+
+    # Step 2: TDEE
+    multiplier = ACTIVITY_MULTIPLIERS.get(activity_level, 1.2)
+    tdee = rmr * multiplier
+
+    # Step 3: Goal adjustment
+    daily_adjustment = 0
+    if weekly_rate:
+        daily_adjustment = (float(weekly_rate) * 7700) / 7
+        if general_goal in ['lose_weight', 'lose_fat']:
+            daily_adjustment = -abs(daily_adjustment)
+        elif general_goal == 'build_muscle':
+            daily_adjustment = abs(daily_adjustment)
+
+    calories = round(tdee + daily_adjustment)
+
+    # Step 4: Macro split (40/30/30)
+    carbs = round((calories * 0.4) / 4)
+    protein = round((calories * 0.3) / 4)
+    fat = round((calories * 0.3) / 9)
+
+    return render_template('nutrition_targets.html', calories=calories, carbs=carbs, fat=fat, protein=protein)
 
 if __name__ == '__main__':
     app.run(debug=True)
