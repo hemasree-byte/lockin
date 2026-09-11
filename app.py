@@ -273,7 +273,7 @@ def nutrition_targets():
         connection.commit()
         connection.close()
 
-        return "Nutrition targets saved! Onboarding flow complete so far."
+        return redirect(url_for('reminders'))
 
     # GET: calculate the estimate
     cursor.execute(
@@ -320,6 +320,48 @@ def nutrition_targets():
     fat = round((calories * 0.3) / 9)
 
     return render_template('nutrition_targets.html', calories=calories, carbs=carbs, fat=fat, protein=protein)
+@app.route('/reminders', methods=['GET', 'POST'])
+def reminders():
+    if request.method == 'POST':
+        opt_in = request.form.get('opt_in')
+        user_id = session.get('user_id')
+
+        if opt_in == 'yes':
+            return redirect(url_for('reminder_time'))
+        else:
+            connection = sqlite3.connect('database.db')
+            cursor = connection.cursor()
+            cursor.execute(
+                "INSERT INTO user_reminders (user_id, opted_in, reminder_time) VALUES (?, ?, ?)",
+                (user_id, False, None)
+            )
+            connection.commit()
+            connection.close()
+            return "Onboarding complete! Welcome to Lockin."
+
+    return render_template('reminders.html')
+
+
+@app.route('/reminder_time', methods=['GET', 'POST'])
+def reminder_time():
+    if request.method == 'POST':
+        reminder_time = request.form.get('reminder_time')
+        custom_time = request.form.get('custom_time')
+        final_time = custom_time if custom_time else reminder_time
+        user_id = session.get('user_id')
+
+        connection = sqlite3.connect('database.db')
+        cursor = connection.cursor()
+        cursor.execute(
+            "INSERT INTO user_reminders (user_id, opted_in, reminder_time) VALUES (?, ?, ?)",
+            (user_id, True, final_time)
+        )
+        connection.commit()
+        connection.close()
+
+        return "Onboarding complete! Welcome to Lockin."
+
+    return render_template('reminder_time.html')
 
 if __name__ == '__main__':
     app.run(debug=True)

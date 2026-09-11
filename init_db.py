@@ -60,6 +60,14 @@ CREATE TABLE IF NOT EXISTS nutrition_targets (
 )
 ''')
 
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS user_reminders (
+    user_id INTEGER PRIMARY KEY REFERENCES users(user_id),
+    opted_in BOOLEAN,
+    reminder_time TEXT
+)
+''')
+
 connection.commit()
 connection.close()
 
