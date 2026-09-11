@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
     agreed_to_tos BOOLEAN NOT NULL DEFAULT 0,
+    password_hash TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
 ''')

@@ -1,24 +1,29 @@
 from flask import Flask, render_template, request, redirect, url_for, session
+from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 from datetime import date, timedelta
 
+
 app = Flask(__name__)
 app.secret_key = 'dev-secret-key-change-later'
-
 @app.route('/', methods=['GET', 'POST'])
+
 def signup():
     if request.method == 'POST':
         username = request.form.get('username')
         email = request.form.get('email')
+        password = request.form.get('password')
         tos = request.form.get('tos')
+
+        password_hash = generate_password_hash(password)
 
         connection = sqlite3.connect('database.db')
         cursor = connection.cursor()
 
         try:
             cursor.execute(
-                "INSERT INTO users (username, email, agreed_to_tos) VALUES (?, ?, ?)",
-                (username, email, bool(tos))
+                "INSERT INTO users (username, email, agreed_to_tos, password_hash) VALUES (?, ?, ?, ?)",
+                (username, email, bool(tos), password_hash)
             )
             user_id = cursor.lastrowid
             connection.commit()
@@ -30,6 +35,42 @@ def signup():
             return "That username or email is already registered. Please try a different one."
 
     return render_template('signup.html')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        connection = sqlite3.connect('database.db')
+        cursor = connection.cursor()
+        cursor.execute("SELECT user_id, password_hash FROM users WHERE username = ?", (username,))
+        result = cursor.fetchone()
+        connection.close()
+
+        if result and check_password_hash(result[1], password):
+            session['user_id'] = result[0]
+            return redirect(url_for('dashboard'))
+        else:
+            return "Invalid username or password. Please try again."
+
+    return render_template('login.html')  
+@app.route('/dashboard')
+
+
+def dashboard():
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login'))
+
+    connection = sqlite3.connect('database.db')
+    cursor = connection.cursor()
+    cursor.execute("SELECT username FROM users WHERE user_id = ?", (user_id,))
+    username = cursor.fetchone()[0]
+    connection.close()
+
+    return f"Welcome back, {username}! (Dashboard coming soon)" 
 
 
 @app.route('/units', methods=['GET', 'POST'])
