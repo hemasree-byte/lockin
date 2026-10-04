@@ -373,7 +373,7 @@ def reminders():
             connection = sqlite3.connect('database.db')
             cursor = connection.cursor()
             cursor.execute(
-                "INSERT INTO user_reminders (user_id, opted_in, reminder_time) VALUES (?, ?, ?)",
+                "INSERT OR REPLACE INTO user_reminders (user_id, opted_in, reminder_time) VALUES (?, ?, ?)",
                 (user_id, False, None)
             )
             connection.commit()
@@ -394,7 +394,7 @@ def reminder_time():
         connection = sqlite3.connect('database.db')
         cursor = connection.cursor()
         cursor.execute(
-            "INSERT INTO user_reminders (user_id, opted_in, reminder_time) VALUES (?, ?, ?)",
+            "INSERT OR REPLACE INTO user_reminders (user_id, opted_in, reminder_time) VALUES (?, ?, ?)",
             (user_id, True, final_time)
         )
         connection.commit()

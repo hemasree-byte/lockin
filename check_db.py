@@ -18,4 +18,9 @@ cursor.execute("SELECT * FROM user_goals")
 for row in cursor.fetchall():
     print(row)
 
+print("\n--- USER REMINDERS ---")
+cursor.execute("SELECT * FROM user_reminders")
+for row in cursor.fetchall():
+    print(row)   
+
 connection.close()
