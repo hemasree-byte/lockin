@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Lockin - Financial Health</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Split your income</h1>
+    <p>Divide your monthly income between these areas. The total must be exactly 100%.</p>
+
+    {% if error %}
+        <p style="color:#b00020"><strong>{{ error }}</strong></p>
+    {% endif %}
+
+    <form method="POST">
+        <label>Monthly income (₹):</label>
+        <input type="number" name="income" step="0.01" min="0" required>
+
+        {% for key, label in categories %}
+            <label>{{ label }} (%):</label>
+            <input type="number" name="{{ key }}" step="0.1" min="0" max="100" required>
+        {% endfor %}
+
+        <button type="submit">Save split</button>
+    </form>
+
+    {% if saved %}
+        <h2>Your current split</h2>
+        <p>Monthly income: ₹{{ saved_income }}</p>
+        <ul>
+        {% for label, pct, amount in saved %}
+            <li>{{ label }}: {{ pct }}% (₹{{ amount }})</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+
+    <p><a href="{{ url_for('dashboard') }}">Back to dashboard</a></p>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lockin - Dashboard</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Welcome back, {{ username }}</h1>
+    <p>How well is your life being maintained? Pick an area.</p>
+    <p><a href="{{ url_for('meal_plan') }}">Physical Health: your meal plan</a></p>
+    <p><a href="/finance">Financial Health: income split</a></p>
+    <p><a href="{{ url_for('etiquette') }}">Etiquettes: everyday manners</a></p>
+</body>
+</html>

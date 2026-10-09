@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lockin - Your Meal Plan</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Your meal suggestions</h1>
+    {% for meal, foods in plan.items() %}
+        <h2>{{ meal|capitalize }}</h2>
+        {% if foods %}
+            <ul>
+            {% for food in foods %}
+                <li>{{ food.name }}</li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No foods match your diet and allergies for this meal yet.</p>
+        {% endif %}
+    {% endfor %}
+</body>
+</html>

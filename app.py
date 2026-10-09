@@ -56,9 +56,10 @@ def login():
             return "Invalid username or password. Please try again."
 
     return render_template('login.html')  
+
+
+
 @app.route('/dashboard')
-
-
 def dashboard():
     user_id = session.get('user_id')
     if not user_id:
@@ -70,7 +71,7 @@ def dashboard():
     username = cursor.fetchone()[0]
     connection.close()
 
-    return f"Welcome back, {username}! (Dashboard coming soon)" 
+    return render_template('dashboard.html', username=username)
 
 
 @app.route('/units', methods=['GET', 'POST'])
@@ -194,14 +195,33 @@ def diet():
 
 DIET_EXCLUSIONS = {
     'keto': ['gluten'],
-    'vegetarian': ['shellfish'],
-    'vegan': ['dairy', 'eggs', 'shellfish'],
+    'vegetarian': ['shellfish', 'meat', 'fish'],
+    'vegan': ['dairy', 'eggs', 'shellfish', 'meat', 'fish'],
     'paleo': ['dairy', 'gluten', 'soy'],
     'mediterranean': [],
     'anything': []
 }
 
 ALLERGENS = ['dairy', 'eggs', 'gluten', 'peanuts', 'sesame', 'shellfish', 'soy', 'tree nuts']
+
+FOODS = [
+    {'name': 'Oatmeal with banana', 'meal': 'breakfast', 'contains': []},
+    {'name': 'Scrambled eggs on toast', 'meal': 'breakfast', 'contains': ['eggs', 'gluten']},
+    {'name': 'Fruit smoothie with yogurt', 'meal': 'breakfast', 'contains': ['dairy']},
+    {'name': 'Peanut butter sandwich', 'meal': 'breakfast', 'contains': ['peanuts', 'gluten']},
+    {'name': 'Vegetable salad bowl', 'meal': 'lunch', 'contains': []},
+    {'name': 'Chicken wrap', 'meal': 'lunch', 'contains': ['gluten', 'meat']},
+    {'name': 'Rice with dal', 'meal': 'lunch', 'contains': []},
+    {'name': 'Paneer rice bowl', 'meal': 'lunch', 'contains': ['dairy']},
+    {'name': 'Grilled vegetables with quinoa', 'meal': 'dinner', 'contains': []},
+    {'name': 'Fish curry with rice', 'meal': 'dinner', 'contains': ['shellfish']},
+    {'name': 'Veg pasta', 'meal': 'dinner', 'contains': ['gluten']},
+    {'name': 'Tofu stir fry', 'meal': 'dinner', 'contains': ['soy', 'sesame']},
+    {'name': 'Mixed fruit bowl', 'meal': 'snack', 'contains': []},
+    {'name': 'Roasted almonds', 'meal': 'snack', 'contains': ['tree nuts']},
+    {'name': 'Greek yogurt cup', 'meal': 'snack', 'contains': ['dairy']},
+    {'name': 'Peanut chikki', 'meal': 'snack', 'contains': ['peanuts']},
+]
 
 @app.route('/allergies', methods=['GET', 'POST'])
 def allergies():
@@ -378,7 +398,7 @@ def reminders():
             )
             connection.commit()
             connection.close()
-            return "Onboarding complete! Welcome to Lockin."
+            return redirect(url_for('meal_plan'))
 
     return render_template('reminders.html')
 
@@ -400,9 +420,140 @@ def reminder_time():
         connection.commit()
         connection.close()
 
-        return "Onboarding complete! Welcome to Lockin."
+        return redirect(url_for('meal_plan'))
 
     return render_template('reminder_time.html')
 
+@app.route('/meal_plan')
+def meal_plan():
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login'))
+
+    connection = sqlite3.connect('database.db')
+    try:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT diet_type, allergies, meals FROM physical_profile WHERE user_id = ?",
+            (user_id,)
+        )
+        row = cursor.fetchone()
+    finally:
+        connection.close()
+
+    if row is None:
+        return redirect(url_for('units'))
+
+    diet_type, allergies_str, meals_str = row
+
+    allergies_list = [a for a in (allergies_str or '').split(',') if a]
+    chosen_meals = [m for m in (meals_str or '').split(',') if m]
+
+    blocked = set(allergies_list) | set(DIET_EXCLUSIONS.get(diet_type, []))
+
+    plan = {}
+    for meal in chosen_meals:
+        plan[meal] = [
+            food for food in FOODS
+            if food['meal'] == meal and not (set(food['contains']) & blocked)
+        ]
+
+    return render_template('meal_plan.html', plan=plan)
+
+@app.route('/etiquette')
+def etiquette():
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    tips = {
+        'Dining': [
+            'Wait for everyone to be served before you start eating.',
+            'Keep your phone off the table.',
+            'Chew with your mouth closed and do not talk with food in it.',
+        ],
+        'Workplace': [
+            'Be on time, and message early if you will be late.',
+            'Reply to emails within a working day.',
+            'Greet people properly when you enter a room.',
+        ],
+        'Online and phone': [
+            'Do not call late at night unless it is urgent.',
+            'Use a clear, polite tone in messages.',
+            'Think before you post something you cannot take back.',
+        ],
+    }
+    return render_template('etiquette.html', tips=tips)
+
+FINANCE_CATEGORIES = [
+    ('savings_pct', 'Savings'),
+    ('emergency_pct', 'Emergency fund'),
+    ('investments_pct', 'Investments'),
+    ('fixed_deposit_pct', 'Fixed deposit'),
+    ('trading_pct', 'Trading capital'),
+]
+
+
+@app.route('/finance', methods=['GET', 'POST'])
+def finance():
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login'))
+
+    error = None
+
+    if request.method == 'POST':
+        try:
+            income = float(request.form.get('income'))
+            values = [float(request.form.get(key) or 0) for key, label in FINANCE_CATEGORIES]
+        except (TypeError, ValueError):
+            error = 'Please enter numbers only.'
+
+        if error is None:
+            total = sum(values)
+            if income <= 0:
+                error = 'Income must be more than 0.'
+            elif any(v < 0 for v in values):
+                error = 'Percentages cannot be negative.'
+            elif round(total, 2) != 100:
+                error = f'Your split adds up to {total:g}%. It must be exactly 100%.'
+
+        if error is None:
+            connection = sqlite3.connect('database.db')
+            try:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "INSERT OR REPLACE INTO finance_split (user_id, monthly_income, savings_pct, emergency_pct, investments_pct, fixed_deposit_pct, trading_pct) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (user_id, income, *values)
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            return redirect(url_for('finance'))
+
+    connection = sqlite3.connect('database.db')
+    try:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT monthly_income, savings_pct, emergency_pct, investments_pct, fixed_deposit_pct, trading_pct FROM finance_split WHERE user_id = ?",
+            (user_id,)
+        )
+        row = cursor.fetchone()
+    finally:
+        connection.close()
+
+    saved = None
+    saved_income = None
+    if row:
+        saved_income = row[0]
+        saved = [
+            (label, row[i + 1], round(row[0] * row[i + 1] / 100, 2))
+            for i, (key, label) in enumerate(FINANCE_CATEGORIES)
+        ]
+
+    return render_template('finance.html', categories=FINANCE_CATEGORIES, error=error,
+                           saved=saved, saved_income=saved_income)
+
 if __name__ == '__main__':
     app.run(debug=True)
+
+    
