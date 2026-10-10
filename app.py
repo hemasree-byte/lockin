@@ -214,8 +214,7 @@ FOODS = [
     {'name': 'Rice with dal', 'meal': 'lunch', 'contains': []},
     {'name': 'Paneer rice bowl', 'meal': 'lunch', 'contains': ['dairy']},
     {'name': 'Grilled vegetables with quinoa', 'meal': 'dinner', 'contains': []},
-    {'name': 'Fish curry with rice', 'meal': 'dinner', 'contains': ['shellfish']},
-    {'name': 'Veg pasta', 'meal': 'dinner', 'contains': ['gluten']},
+    {'name': 'Fish curry with rice', 'meal': 'dinner', 'contains': ['fish']},    {'name': 'Veg pasta', 'meal': 'dinner', 'contains': ['gluten']},
     {'name': 'Tofu stir fry', 'meal': 'dinner', 'contains': ['soy', 'sesame']},
     {'name': 'Mixed fruit bowl', 'meal': 'snack', 'contains': []},
     {'name': 'Roasted almonds', 'meal': 'snack', 'contains': ['tree nuts']},
@@ -398,7 +397,7 @@ def reminders():
             )
             connection.commit()
             connection.close()
-            return redirect(url_for('meal_plan'))
+            return redirect(url_for('dashboard'))
 
     return render_template('reminders.html')
 
@@ -420,7 +419,7 @@ def reminder_time():
         connection.commit()
         connection.close()
 
-        return redirect(url_for('meal_plan'))
+        return redirect(url_for('dashboard'))
 
     return render_template('reminder_time.html')
 
@@ -552,6 +551,85 @@ def finance():
 
     return render_template('finance.html', categories=FINANCE_CATEGORIES, error=error,
                            saved=saved, saved_income=saved_income)
+
+
+ACTUAL_COLUMNS = ['savings_amt', 'emergency_amt', 'investments_amt', 'fixed_deposit_amt', 'trading_amt']
+
+
+@app.route('/finance_progress', methods=['GET', 'POST'])
+def finance_progress():
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login'))
+
+    connection = sqlite3.connect('database.db')
+    try:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT monthly_income, savings_pct, emergency_pct, investments_pct, fixed_deposit_pct, trading_pct FROM finance_split WHERE user_id = ?",
+            (user_id,)
+        )
+        split = cursor.fetchone()
+    finally:
+        connection.close()
+
+    if split is None:
+        return redirect(url_for('finance'))
+
+    income = split[0]
+    targets = split[1:]
+    error = None
+
+    if request.method == 'POST':
+        try:
+            amounts = [float(request.form.get(col) or 0) for col in ACTUAL_COLUMNS]
+        except ValueError:
+            error = 'Please enter numbers only.'
+        else:
+            if any(a < 0 for a in amounts):
+                error = 'Amounts cannot be negative.'
+
+        if error is None:
+            connection = sqlite3.connect('database.db')
+            try:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "INSERT OR REPLACE INTO finance_actual (user_id, savings_amt, emergency_amt, investments_amt, fixed_deposit_amt, trading_amt) VALUES (?, ?, ?, ?, ?, ?)",
+                    (user_id, *amounts)
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            return redirect(url_for('finance_progress'))
+
+    connection = sqlite3.connect('database.db')
+    try:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT savings_amt, emergency_amt, investments_amt, fixed_deposit_amt, trading_amt FROM finance_actual WHERE user_id = ?",
+            (user_id,)
+        )
+        actual = cursor.fetchone()
+    finally:
+        connection.close()
+
+    rows = []
+    if actual:
+        for i, (key, label) in enumerate(FINANCE_CATEGORIES):
+            target = targets[i]
+            actual_pct = round(actual[i] / income * 100, 1)
+            diff = round(actual_pct - target, 1)
+            if abs(diff) <= 5:
+                status = 'On track'
+            elif diff < 0:
+                status = f'Under target by {abs(diff):g} points. Put more here.'
+            else:
+                status = f'Over target by {diff:g} points. Check your other areas.'
+            rows.append((label, target, actual_pct, status))
+
+    fields = list(zip(ACTUAL_COLUMNS, [label for key, label in FINANCE_CATEGORIES]))
+    return render_template('finance_progress.html', rows=rows, fields=fields, error=error, income=income)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

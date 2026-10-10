@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Lockin - Monthly progress</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .bar { background:#e3e3e3; border-radius:4px; height:18px; margin:4px 0 10px 0; }
+        .fill { height:18px; border-radius:4px; }
+        .target-fill { background:#2c6e49; }
+        .actual-fill { background:#e08a1e; }
+        .status { font-weight:bold; }
+    </style>
+</head>
+<body>
+    <h1>Target vs actual</h1>
+    <p>Monthly income: ₹{{ income }}. Enter how much you really put into each area this month.</p>
+
+    {% if error %}
+        <p style="color:#b00020"><strong>{{ error }}</strong></p>
+    {% endif %}
+
+    <form method="POST">
+        {% for col, label in fields %}
+            <label>{{ label }} (₹):</label>
+            <input type="number" name="{{ col }}" step="0.01" min="0" required>
+        {% endfor %}
+        <button type="submit">Save this month</button>
+    </form>
+
+    {% if rows %}
+        <h2>How you are doing</h2>
+        {% for label, target, actual, status in rows %}
+            <h3>{{ label }}</h3>
+            <div>Target: {{ target }}%</div>
+            <div class="bar"><div class="fill target-fill" style="width: {{ [target, 100]|min }}%"></div></div>
+            <div>Actual: {{ actual }}%</div>
+            <div class="bar"><div class="fill actual-fill" style="width: {{ [actual, 100]|min }}%"></div></div>
+            <p class="status">{{ status }}</p>
+        {% endfor %}
+    {% endif %}
+
+    <p><a href="{{ url_for('finance') }}">Back to income split</a></p>
+</body>
+</html>

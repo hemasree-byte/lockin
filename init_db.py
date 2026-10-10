@@ -81,6 +81,17 @@ CREATE TABLE IF NOT EXISTS finance_split (
 )
 ''')
 
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS finance_actual (
+    user_id INTEGER PRIMARY KEY REFERENCES users(user_id),
+    savings_amt REAL,
+    emergency_amt REAL,
+    investments_amt REAL,
+    fixed_deposit_amt REAL,
+    trading_amt REAL
+)
+''')
+
 connection.commit()
 connection.close()
 
