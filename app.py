@@ -631,6 +631,70 @@ def finance_progress():
     return render_template('finance_progress.html', rows=rows, fields=fields, error=error, income=income)
 
 
+    @app.route('/finance_safety', methods=['GET', 'POST'])
+def finance_safety():
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login'))
+
+    error = None
+
+    if request.method == 'POST':
+        try:
+            expenses = float(request.form.get('monthly_expenses'))
+            savings = float(request.form.get('emergency_savings'))
+        except (TypeError, ValueError):
+            error = 'Please enter numbers only.'
+        else:
+            if expenses <= 0:
+                error = 'Monthly expenses must be more than 0.'
+            elif savings < 0:
+                error = 'Savings cannot be negative.'
+
+        if error is None:
+            connection = sqlite3.connect('database.db')
+            try:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "INSERT OR REPLACE INTO finance_safety (user_id, monthly_expenses, emergency_savings) VALUES (?, ?, ?)",
+                    (user_id, expenses, savings)
+                )
+                connection.commit()
+            finally:
+                connection.close()
+            return redirect(url_for('finance_safety'))
+
+    connection = sqlite3.connect('database.db')
+    try:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT monthly_expenses, emergency_savings FROM finance_safety WHERE user_id = ?",
+            (user_id,)
+        )
+        row = cursor.fetchone()
+    finally:
+        connection.close()
+
+    result = None
+    if row:
+        expenses, savings = row
+        months = round(savings / expenses, 1)
+        target_amount = round(expenses * 6, 2)
+        shortfall = max(round(target_amount - savings, 2), 0)
+
+        if months >= 6:
+            status = 'Strong. Your reserve covers 6 months or more.'
+        elif months >= 3:
+            status = 'Getting there. A common guideline is 3 to 6 months of expenses.'
+        else:
+            status = 'Below 3 months. Building this reserve is a good first priority.'
+
+        result = {'months': months, 'status': status,
+                  'target_amount': target_amount, 'shortfall': shortfall}
+
+    return render_template('finance_safety.html', result=result, error=error)
+
+
 if __name__ == '__main__':
     app.run(debug=True)
 

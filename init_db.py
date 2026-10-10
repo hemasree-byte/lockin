@@ -92,6 +92,14 @@ CREATE TABLE IF NOT EXISTS finance_actual (
 )
 ''')
 
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS finance_safety (
+    user_id INTEGER PRIMARY KEY REFERENCES users(user_id),
+    monthly_expenses REAL,
+    emergency_savings REAL
+)
+''')
+
 connection.commit()
 connection.close()
 
