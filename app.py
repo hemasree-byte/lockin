@@ -631,7 +631,9 @@ def finance_progress():
     return render_template('finance_progress.html', rows=rows, fields=fields, error=error, income=income)
 
 
-    @app.route('/finance_safety', methods=['GET', 'POST'])
+
+
+@app.route('/finance_safety', methods=['GET', 'POST'])
 def finance_safety():
     user_id = session.get('user_id')
     if not user_id:
@@ -693,9 +695,70 @@ def finance_safety():
                   'target_amount': target_amount, 'shortfall': shortfall}
 
     return render_template('finance_safety.html', result=result, error=error)
+@app.route('/standing')
+def standing():
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login'))
+
+    def fetch_one(query):
+        connection = sqlite3.connect('database.db')
+        try:
+            cursor = connection.cursor()
+            cursor.execute(query, (user_id,))
+            return cursor.fetchone()
+        except sqlite3.OperationalError:
+            return None
+        finally:
+            connection.close()
+
+    targets = fetch_one("SELECT calories, protein_g FROM nutrition_targets WHERE user_id = ?")
+    safety = fetch_one("SELECT monthly_expenses, emergency_savings FROM finance_safety WHERE user_id = ?")
+    split = fetch_one("SELECT monthly_income, savings_pct, emergency_pct, investments_pct, fixed_deposit_pct, trading_pct FROM finance_split WHERE user_id = ?")
+    actual = fetch_one("SELECT savings_amt, emergency_amt, investments_amt, fixed_deposit_amt, trading_amt FROM finance_actual WHERE user_id = ?")
+
+    health_lines = []
+    if targets:
+        health_lines.append(f'Daily target: {round(float(targets[0]))} kcal and {round(float(targets[1]))} g protein.')
+        health_lines.append('Your meal plan is ready.')
+    else:
+        health_lines.append('Not set up yet. Finish onboarding to get your targets.')
+
+    finance_lines = []
+    if safety and safety[0]:
+        months = round(safety[1] / safety[0], 1)
+        if months >= 6:
+            level = 'strong'
+        elif months >= 3:
+            level = 'getting there'
+        else:
+            level = 'needs attention'
+        finance_lines.append(f'Safety net: {months} months of expenses covered ({level}).')
+    if split and actual and split[0]:
+        on_track = 0
+        for i in range(5):
+            actual_pct = actual[i] / split[0] * 100
+            if abs(actual_pct - split[i + 1]) <= 5:
+                on_track += 1
+        finance_lines.append(f'{on_track} of 5 money areas on track this month.')
+    elif split:
+        finance_lines.append('Income split saved. Log this month to see progress.')
+    if not finance_lines:
+        finance_lines.append('Not set up yet. Start with your income split.')
+
+    etiquette_lines = ['Not assessed yet. Read the guide to get started.']
+
+    cards = [
+        ('Physical Health', health_lines, 'meal_plan', 'Open meal plan'),
+        ('Financial Health', finance_lines, 'finance', 'Open finance'),
+        ('Etiquettes', etiquette_lines, 'etiquette', 'Open guide'),
+    ]
+    return render_template('standing.html', cards=cards)
 
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
 
     

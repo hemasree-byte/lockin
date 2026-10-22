@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Lockin - Where you stand</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Where you stand</h1>
+    <p>A quick look at how well each area of your life is being maintained.</p>
+
+    {% for title, lines, endpoint, label in cards %}
+        <h2>{{ title }}</h2>
+        <ul>
+        {% for line in lines %}
+            <li>{{ line }}</li>
+        {% endfor %}
+        </ul>
+        <p><a href="{{ url_for(endpoint) }}">{{ label }}</a></p>
+    {% endfor %}
+
+    <p><a href="{{ url_for('dashboard') }}">Back to dashboard</a></p>
+</body>
+</html>
