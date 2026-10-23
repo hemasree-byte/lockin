@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS physical_profile (
     body_fat_level TEXT,
     activity_level TEXT,
     diet_type TEXT,
-    allergies TEXT
+    allergies TEXT,
+    meals TEXT
 )
 ''')
 
