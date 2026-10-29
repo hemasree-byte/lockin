@@ -1,15 +1,66 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Lockin - Dashboard</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="wide">
+    {% macro score_row(label, score, empty_text) %}
+        <div class="bar-row">
+            <div class="bar-label"><span>{{ label }}</span><span>{% if score is not none %}{{ score }}%{% else %}{{ empty_text }}{% endif %}</span></div>
+            <div class="dbar"><div class="dfill" style="width: {{ score if score is not none else 0 }}%"></div></div>
+        </div>
+    {% endmacro %}
+
+    <nav class="topnav">
+        <a href="{{ url_for('meal_plan') }}">Health</a>
+        <a href="{{ url_for('finance_plan') }}">Money</a>
+        <a href="{{ url_for('etiquette') }}">Etiquette</a>
+        <a href="{{ url_for('standing') }}">Progress</a>
+        <a href="{{ url_for('logout') }}">Log out</a>
+    </nav>
+
     <h1>Welcome back, {{ username }}</h1>
-    <p>How well is your life being maintained? Pick an area.</p>
-    <p><a href="{{ url_for('standing') }}">Where you stand</a></p>
-    <p><a href="{{ url_for('meal_plan') }}">Physical Health: your meal plan</a></p>
-    <p><a href="/finance">Financial Health: income split</a></p>
-    <p><a href="{{ url_for('etiquette') }}">Etiquettes: everyday manners</a></p>
-        <p><a href="{{ url_for('standing') }}">Where you stand</a></p>
+
+    <div class="strip">
+        <div class="metric"><span class="m-label">Calories</span><span class="m-value">{{ calories if calories is not none else '-' }}</span><span class="m-unit">kcal / day</span></div>
+        <div class="metric"><span class="m-label">Protein</span><span class="m-value">{{ protein if protein is not none else '-' }}</span><span class="m-unit">g / day</span></div>
+        <div class="metric"><span class="m-label">Savings target</span><span class="m-value">{{ planned_savings if planned_savings is not none else '-' }}</span><span class="m-unit">₹ / month</span></div>
+        <div class="metric"><span class="m-label">Reserve</span><span class="m-value">{{ reserve_months if reserve_months is not none else '-' }}</span><span class="m-unit">months</span></div>
+        <div class="metric"><span class="m-label">Goal</span><span class="m-value goal">{{ goal_text }}</span></div>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <h2>Your standing</h2>
+            {{ score_row('Health setup', health_score, 'Not set up') }}
+            {{ score_row('Finance', finance_score, 'Not set up') }}
+            {{ score_row('Etiquette', none, 'Not assessed') }}
+            <p class="note">Health = how much of your profile is set up. Finance = your safety net (6 months = 100%) and money areas on track.</p>
+        </div>
+
+        <div class="panel">
+            <h2>Money allocation</h2>
+            {% if allocation %}
+                {% for label, pct in allocation %}
+                    <div class="bar-row">
+                        <div class="bar-label"><span>{{ label }}</span><span>{{ pct }}%</span></div>
+                        <div class="dbar"><div class="dfill" style="width: {{ [pct, 100]|min }}%"></div></div>
+                    </div>
+                {% endfor %}
+                <p class="note">Share of your monthly income. The rest covers essentials.</p>
+            {% else %}
+                <p>No plan yet. <a href="{{ url_for('finance_plan') }}">Get your money plan</a>.</p>
+            {% endif %}
+        </div>
+
+        <div class="panel">
+            <h2>Quick actions</h2>
+            <p><a href="{{ url_for('finance_progress') }}">+ Log this month's money</a></p>
+            <p><a href="{{ url_for('meal_plan') }}">+ View meal plan</a></p>
+            <p><a href="{{ url_for('finance_safety') }}">+ Check safety net</a></p>
+            <p><a href="{{ url_for('finance_plan') }}">+ Update money plan</a></p>
+        </div>
+    </div>
 </body>
 </html>

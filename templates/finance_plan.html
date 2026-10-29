@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Lockin - Your money plan</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Your money plan</h1>
+    <p>Tell us three numbers. We will work out a suggested split for you.</p>
+
+    {% if error %}
+        <p style="color:#b3261e"><strong>{{ error }}</strong></p>
+    {% endif %}
+
+    <form method="POST">
+        <label>Monthly income (₹):</label>
+        <input type="number" name="income" step="0.01" min="0" required>
+
+        <label>Essential monthly expenses (₹): food, rent, transport, bills</label>
+        <input type="number" name="expenses" step="0.01" min="0" required>
+
+        <label>Emergency savings you already have (₹):</label>
+        <input type="number" name="savings_now" step="0.01" min="0" value="0">
+
+        <button type="submit">Suggest my split</button>
+    </form>
+
+    {% if plan %}
+        <h2>Your suggested split</h2>
+        <p>Income ₹{{ plan.income }}. Essentials ₹{{ plan.expenses }}. Left to split: <strong>₹{{ plan.remaining }}</strong>.</p>
+        <p>Your safety net covers {{ plan.months }} months of expenses.</p>
+        <p>{{ plan.reason }}</p>
+        <ul>
+        {% for label, share, amount in plan.rows %}
+            <li>{{ label }}: {{ share }}% of what is left (₹{{ amount }})</li>
+        {% endfor %}
+        </ul>
+        <p>This is a simple rule-based guideline for learning, not professional financial advice.</p>
+        <p><a href="{{ url_for('finance_progress') }}">Track this month's progress</a></p>
+    {% endif %}
+
+    <p><a href="{{ url_for('finance') }}">Prefer to set the percentages yourself?</a></p>
+    <p><a href="{{ url_for('dashboard') }}">Back to dashboard</a></p>
+</body>
+</html>

@@ -3,11 +3,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 from datetime import date, timedelta
 
-
 app = Flask(__name__)
 app.secret_key = 'dev-secret-key-change-later'
-@app.route('/', methods=['GET', 'POST'])
 
+
+# ---------------------------------------------------------------
+# ACCOUNT: signup, login, logout, dashboard
+# ---------------------------------------------------------------
+
+@app.route('/', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
         username = request.form.get('username')
@@ -55,8 +59,32 @@ def login():
         else:
             return "Invalid username or password. Please try again."
 
-    return render_template('login.html')  
+    return render_template('login.html')
 
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+def db_one(query, user_id):
+    connection = sqlite3.connect('database.db')
+    try:
+        cursor = connection.cursor()
+        cursor.execute(query, (user_id,))
+        return cursor.fetchone()
+    except sqlite3.OperationalError:
+        return None
+    finally:
+        connection.close()
+
+
+GOAL_LABELS = {
+    'lose_weight': 'Lose weight',
+    'lose_fat': 'Lose fat',
+    'maintain_weight': 'Maintain weight',
+    'build_muscle': 'Build muscle',
+}
 
 
 @app.route('/dashboard')
@@ -65,14 +93,61 @@ def dashboard():
     if not user_id:
         return redirect(url_for('login'))
 
-    connection = sqlite3.connect('database.db')
-    cursor = connection.cursor()
-    cursor.execute("SELECT username FROM users WHERE user_id = ?", (user_id,))
-    username = cursor.fetchone()[0]
-    connection.close()
+    user = db_one("SELECT username FROM users WHERE user_id = ?", user_id)
+    username = user[0] if user else ''
 
-    return render_template('dashboard.html', username=username)
+    targets = db_one("SELECT calories, protein_g FROM nutrition_targets WHERE user_id = ?", user_id)
+    profile = db_one("SELECT height_cm, weight_kg, age, biological_sex, activity_level, diet_type, allergies, meals FROM physical_profile WHERE user_id = ?", user_id)
+    goal = db_one("SELECT general_goal FROM user_goals WHERE user_id = ?", user_id)
+    safety = db_one("SELECT monthly_expenses, emergency_savings FROM finance_safety WHERE user_id = ?", user_id)
+    split = db_one("SELECT monthly_income, savings_pct, emergency_pct, investments_pct, fixed_deposit_pct, trading_pct FROM finance_split WHERE user_id = ?", user_id)
+    actual = db_one("SELECT savings_amt, emergency_amt, investments_amt, fixed_deposit_amt, trading_amt FROM finance_actual WHERE user_id = ?", user_id)
 
+    calories = round(float(targets[0])) if targets and targets[0] else None
+    protein = round(float(targets[1])) if targets and targets[1] else None
+    goal_text = GOAL_LABELS.get(goal[0], '-') if goal and goal[0] else '-'
+
+    reserve_months = round(safety[1] / safety[0], 1) if safety and safety[0] else None
+    planned_savings = round(split[0] * split[1] / 100) if split and split[0] else None
+
+    allocation = []
+    if split:
+        for i, (key, label) in enumerate(FINANCE_CATEGORIES):
+            allocation.append((label, split[i + 1]))
+
+    health_score = None
+    if profile:
+        height, weight, age, sex, activity, diet_type, allergies, meals_str = profile
+        filled = sum(1 for v in (height, weight, age, sex, activity, diet_type, meals_str) if v not in (None, ''))
+        if allergies is not None:
+            filled += 1
+        health_score = round(filled / 8 * 100)
+
+    parts = []
+    if reserve_months is not None:
+        parts.append(min(reserve_months / 6, 1) * 100)
+    if split and actual and split[0]:
+        on_track = 0
+        for i in range(5):
+            target = split[i + 1]
+            if target > 0 and actual[i] == 0:
+                continue
+            if abs(actual[i] / split[0] * 100 - target) <= 5:
+                on_track += 1
+        parts.append(on_track / 5 * 100)
+    finance_score = round(sum(parts) / len(parts)) if parts else None
+
+    return render_template(
+        'dashboard.html', username=username, calories=calories, protein=protein,
+        goal_text=goal_text, reserve_months=reserve_months, planned_savings=planned_savings,
+        allocation=allocation, health_score=health_score, finance_score=finance_score
+    )
+
+# ---------------------------------------------------------------
+# ONBOARDING (Health): units -> profile -> goals -> activity ->
+# diet -> allergies -> meals -> meal preferences -> nutrition
+# targets -> reminders
+# ---------------------------------------------------------------
 
 @app.route('/units', methods=['GET', 'POST'])
 def units():
@@ -118,7 +193,6 @@ def profile():
 
     return render_template('profile.html')
 
-from datetime import date, timedelta
 
 @app.route('/goals', methods=['GET', 'POST'])
 def goals():
@@ -153,6 +227,7 @@ def goals():
 
     return render_template('goals.html')
 
+
 @app.route('/activity', methods=['GET', 'POST'])
 def activity():
     if request.method == 'POST':
@@ -172,6 +247,7 @@ def activity():
 
     return render_template('activity.html')
 
+
 @app.route('/diet', methods=['GET', 'POST'])
 def diet():
     if request.method == 'POST':
@@ -190,7 +266,6 @@ def diet():
         return redirect(url_for('allergies'))
 
     return render_template('diet.html')
-
 
 
 DIET_EXCLUSIONS = {
@@ -214,13 +289,15 @@ FOODS = [
     {'name': 'Rice with dal', 'meal': 'lunch', 'contains': []},
     {'name': 'Paneer rice bowl', 'meal': 'lunch', 'contains': ['dairy']},
     {'name': 'Grilled vegetables with quinoa', 'meal': 'dinner', 'contains': []},
-    {'name': 'Fish curry with rice', 'meal': 'dinner', 'contains': ['fish']},    {'name': 'Veg pasta', 'meal': 'dinner', 'contains': ['gluten']},
+    {'name': 'Fish curry with rice', 'meal': 'dinner', 'contains': ['fish']},
+    {'name': 'Veg pasta', 'meal': 'dinner', 'contains': ['gluten']},
     {'name': 'Tofu stir fry', 'meal': 'dinner', 'contains': ['soy', 'sesame']},
     {'name': 'Mixed fruit bowl', 'meal': 'snack', 'contains': []},
     {'name': 'Roasted almonds', 'meal': 'snack', 'contains': ['tree nuts']},
     {'name': 'Greek yogurt cup', 'meal': 'snack', 'contains': ['dairy']},
     {'name': 'Peanut chikki', 'meal': 'snack', 'contains': ['peanuts']},
 ]
+
 
 @app.route('/allergies', methods=['GET', 'POST'])
 def allergies():
@@ -267,8 +344,9 @@ def meals():
         connection.close()
 
         return redirect(url_for('meal_preferences', meal_type='breakfast'))
-    
+
     return render_template('meals.html')
+
 
 MEAL_CATEGORIES = {
     'breakfast': ['Shakes & smoothies', 'Oatmeal & cereals', 'Sandwiches & wraps', 'Skillets & hashes', 'Nut/seed & dried fruits', 'High protein snacks'],
@@ -278,6 +356,7 @@ MEAL_CATEGORIES = {
 }
 
 MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack']
+
 
 @app.route('/meal_preferences/<meal_type>', methods=['GET', 'POST'])
 def meal_preferences(meal_type):
@@ -292,7 +371,7 @@ def meal_preferences(meal_type):
         connection = sqlite3.connect('database.db')
         cursor = connection.cursor()
         cursor.execute(
-            "INSERT INTO meal_preferences (user_id, meal_type, additional_family_members, preferred_categories) VALUES (?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO meal_preferences (user_id, meal_type, additional_family_members, preferred_categories) VALUES (?, ?, ?, ?)",
             (user_id, meal_type, family_members, categories_str)
         )
         connection.commit()
@@ -304,7 +383,9 @@ def meal_preferences(meal_type):
             return redirect(url_for('meal_preferences', meal_type=next_meal))
         else:
             return redirect(url_for('nutrition_targets'))
+
     return render_template('meal_preferences.html', meal_type=meal_type, categories=categories)
+
 
 ACTIVITY_MULTIPLIERS = {
     'sedentary': 1.2,
@@ -313,6 +394,7 @@ ACTIVITY_MULTIPLIERS = {
     'very_active': 1.725,
     'extremely_active': 1.9
 }
+
 
 @app.route('/nutrition_targets', methods=['GET', 'POST'])
 def nutrition_targets():
@@ -327,7 +409,7 @@ def nutrition_targets():
         protein = request.form.get('protein')
 
         cursor.execute(
-            "INSERT INTO nutrition_targets (user_id, calories, carbs_g, fat_g, protein_g) VALUES (?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO nutrition_targets (user_id, calories, carbs_g, fat_g, protein_g) VALUES (?, ?, ?, ?, ?)",
             (user_id, calories, carbs, fat, protein)
         )
         connection.commit()
@@ -351,13 +433,13 @@ def nutrition_targets():
     general_goal, weekly_rate = goal if goal else (None, None)
     connection.close()
 
-    # Step 1: RMR
+    # Step 1: RMR (Mifflin-St Jeor)
     if sex == 'male':
-        rmr = 10*weight + 6.25*height - 5*age + 5
+        rmr = 10 * weight + 6.25 * height - 5 * age + 5
     elif sex == 'female':
-        rmr = 10*weight + 6.25*height - 5*age - 161
+        rmr = 10 * weight + 6.25 * height - 5 * age - 161
     else:
-        rmr = ((10*weight + 6.25*height - 5*age + 5) + (10*weight + 6.25*height - 5*age - 161)) / 2
+        rmr = ((10 * weight + 6.25 * height - 5 * age + 5) + (10 * weight + 6.25 * height - 5 * age - 161)) / 2
 
     # Step 2: TDEE
     multiplier = ACTIVITY_MULTIPLIERS.get(activity_level, 1.2)
@@ -380,6 +462,8 @@ def nutrition_targets():
     fat = round((calories * 0.3) / 9)
 
     return render_template('nutrition_targets.html', calories=calories, carbs=carbs, fat=fat, protein=protein)
+
+
 @app.route('/reminders', methods=['GET', 'POST'])
 def reminders():
     if request.method == 'POST':
@@ -423,6 +507,11 @@ def reminder_time():
 
     return render_template('reminder_time.html')
 
+
+# ---------------------------------------------------------------
+# HEALTH: meal plan
+# ---------------------------------------------------------------
+
 @app.route('/meal_plan')
 def meal_plan():
     user_id = session.get('user_id')
@@ -459,6 +548,11 @@ def meal_plan():
 
     return render_template('meal_plan.html', plan=plan)
 
+
+# ---------------------------------------------------------------
+# ETIQUETTES
+# ---------------------------------------------------------------
+
 @app.route('/etiquette')
 def etiquette():
     if not session.get('user_id'):
@@ -483,6 +577,13 @@ def etiquette():
     }
     return render_template('etiquette.html', tips=tips)
 
+
+# ---------------------------------------------------------------
+# FINANCE
+# ---------------------------------------------------------------
+
+# The order here must match the order of the shares in finance_plan()
+# and the columns in the finance_split table.
 FINANCE_CATEGORIES = [
     ('savings_pct', 'Savings'),
     ('emergency_pct', 'Emergency fund'),
@@ -491,9 +592,87 @@ FINANCE_CATEGORIES = [
     ('trading_pct', 'Trading capital'),
 ]
 
+ACTUAL_COLUMNS = ['savings_amt', 'emergency_amt', 'investments_amt', 'fixed_deposit_amt', 'trading_amt']
+
+
+@app.route('/finance_plan', methods=['GET', 'POST'])
+def finance_plan():
+    """The app works out a suggested split for the user (rule-based)."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login'))
+
+    error = None
+    plan = None
+
+    if request.method == 'POST':
+        try:
+            income = float(request.form.get('income'))
+            expenses = float(request.form.get('expenses'))
+            savings_now = float(request.form.get('savings_now') or 0)
+        except (TypeError, ValueError):
+            error = 'Please enter numbers only.'
+        else:
+            if income <= 0 or expenses <= 0:
+                error = 'Income and expenses must be more than 0.'
+            elif savings_now < 0:
+                error = 'Savings cannot be negative.'
+            elif expenses >= income:
+                error = 'Your essential expenses are as high as your income, so there is nothing left to split. Reducing expenses or raising income comes first.'
+
+        if error is None:
+            remaining = income - expenses
+            months_raw = savings_now / expenses
+
+            # Order matches FINANCE_CATEGORIES:
+            # savings, emergency, investments, fixed deposit, trading
+            if months_raw < 3:
+                shares = [20, 50, 15, 15, 0]
+                reason = 'Your safety net covers under 3 months, so the biggest share goes to the emergency fund and nothing goes to trading.'
+            elif months_raw < 6:
+                shares = [20, 30, 25, 20, 5]
+                reason = 'Your safety net covers 3 to 6 months. You can start growing money while still topping up the emergency fund.'
+            else:
+                shares = [20, 10, 40, 20, 10]
+                reason = 'Your safety net covers 6 months or more, so more can go towards growth.'
+
+            amounts = [round(remaining * s / 100, 2) for s in shares]
+            pcts_of_income = [round(remaining * s / income, 1) for s in shares]
+
+            connection = sqlite3.connect('database.db')
+            try:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "INSERT OR REPLACE INTO finance_split (user_id, monthly_income, savings_pct, emergency_pct, investments_pct, fixed_deposit_pct, trading_pct) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (user_id, income, *pcts_of_income)
+                )
+                cursor.execute(
+                    "INSERT OR REPLACE INTO finance_safety (user_id, monthly_expenses, emergency_savings) VALUES (?, ?, ?)",
+                    (user_id, expenses, savings_now)
+                )
+                connection.commit()
+            finally:
+                connection.close()
+
+            rows = [
+                (label, shares[i], amounts[i])
+                for i, (key, label) in enumerate(FINANCE_CATEGORIES)
+            ]
+            plan = {
+                'income': income,
+                'expenses': expenses,
+                'remaining': round(remaining, 2),
+                'months': round(months_raw, 1),
+                'reason': reason,
+                'rows': rows,
+            }
+
+    return render_template('finance_plan.html', plan=plan, error=error)
+
 
 @app.route('/finance', methods=['GET', 'POST'])
 def finance():
+    """Manual option: the user sets the percentages themselves (must total 100)."""
     user_id = session.get('user_id')
     if not user_id:
         return redirect(url_for('login'))
@@ -553,9 +732,6 @@ def finance():
                            saved=saved, saved_income=saved_income)
 
 
-ACTUAL_COLUMNS = ['savings_amt', 'emergency_amt', 'investments_amt', 'fixed_deposit_amt', 'trading_amt']
-
-
 @app.route('/finance_progress', methods=['GET', 'POST'])
 def finance_progress():
     user_id = session.get('user_id')
@@ -574,7 +750,7 @@ def finance_progress():
         connection.close()
 
     if split is None:
-        return redirect(url_for('finance'))
+        return redirect(url_for('finance_plan'))
 
     income = split[0]
     targets = split[1:]
@@ -614,12 +790,16 @@ def finance_progress():
         connection.close()
 
     rows = []
+    missing = []
     if actual:
         for i, (key, label) in enumerate(FINANCE_CATEGORIES):
             target = targets[i]
             actual_pct = round(actual[i] / income * 100, 1)
             diff = round(actual_pct - target, 1)
-            if abs(diff) <= 5:
+            if target > 0 and actual[i] == 0:
+                status = 'Not considered yet. Nothing is going into this area.'
+                missing.append(label)
+            elif abs(diff) <= 5:
                 status = 'On track'
             elif diff < 0:
                 status = f'Under target by {abs(diff):g} points. Put more here.'
@@ -628,9 +808,8 @@ def finance_progress():
             rows.append((label, target, actual_pct, status))
 
     fields = list(zip(ACTUAL_COLUMNS, [label for key, label in FINANCE_CATEGORIES]))
-    return render_template('finance_progress.html', rows=rows, fields=fields, error=error, income=income)
-
-
+    return render_template('finance_progress.html', rows=rows, fields=fields, error=error,
+                           income=income, missing=missing)
 
 
 @app.route('/finance_safety', methods=['GET', 'POST'])
@@ -695,6 +874,12 @@ def finance_safety():
                   'target_amount': target_amount, 'shortfall': shortfall}
 
     return render_template('finance_safety.html', result=result, error=error)
+
+
+# ---------------------------------------------------------------
+# WHERE YOU STAND: summary of the three areas
+# ---------------------------------------------------------------
+
 @app.route('/standing')
 def standing():
     user_id = session.get('user_id')
@@ -736,21 +921,28 @@ def standing():
         finance_lines.append(f'Safety net: {months} months of expenses covered ({level}).')
     if split and actual and split[0]:
         on_track = 0
+        not_considered = 0
         for i in range(5):
+            target = split[i + 1]
+            if target > 0 and actual[i] == 0:
+                not_considered += 1
+                continue
             actual_pct = actual[i] / split[0] * 100
-            if abs(actual_pct - split[i + 1]) <= 5:
+            if abs(actual_pct - target) <= 5:
                 on_track += 1
         finance_lines.append(f'{on_track} of 5 money areas on track this month.')
+        if not_considered:
+            finance_lines.append(f'{not_considered} area(s) not considered yet.')
     elif split:
-        finance_lines.append('Income split saved. Log this month to see progress.')
+        finance_lines.append('Money plan saved. Log this month to see progress.')
     if not finance_lines:
-        finance_lines.append('Not set up yet. Start with your income split.')
+        finance_lines.append('Not set up yet. Start with your money plan.')
 
     etiquette_lines = ['Not assessed yet. Read the guide to get started.']
 
     cards = [
         ('Physical Health', health_lines, 'meal_plan', 'Open meal plan'),
-        ('Financial Health', finance_lines, 'finance', 'Open finance'),
+        ('Financial Health', finance_lines, 'finance_plan', 'Open money plan'),
         ('Etiquettes', etiquette_lines, 'etiquette', 'Open guide'),
     ]
     return render_template('standing.html', cards=cards)
@@ -758,7 +950,3 @@ def standing():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
-    
