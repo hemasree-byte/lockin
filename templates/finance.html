@@ -6,7 +6,7 @@
 </head>
 <body>
     <h1>Split your income</h1>
-    <p>Divide your monthly income between these areas. The total must be exactly 100%.</p>
+    <p>Set the percentages yourself. The total must be exactly 100%.</p>
 
     {% if error %}
         <p style="color:#b00020"><strong>{{ error }}</strong></p>
@@ -32,9 +32,11 @@
             <li>{{ label }}: {{ pct }}% (₹{{ amount }})</li>
         {% endfor %}
         </ul>
+        <p><a href="{{ url_for('finance_progress') }}">Track this month's progress</a></p>
     {% endif %}
-        <p><a href="{{ url_for('finance_safety') }}">Check your safety net</a></p>
 
-    <p><a href="{{ url_for('finance_progress') }}">Back to dashboard</a></p>
+    <p><a href="{{ url_for('finance_safety') }}">Check your safety net</a></p>
+    <p><a href="{{ url_for('finance_plan') }}">Let the app suggest a split instead</a></p>
+    <p><a href="{{ url_for('dashboard') }}">Back to dashboard</a></p>
 </body>
 </html>
