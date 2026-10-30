@@ -25,17 +25,24 @@
         <button type="submit">Suggest my split</button>
     </form>
 
-    {% if plan %}
-        <h2>Your suggested split</h2>
-        <p>Income ₹{{ plan.income }}. Essentials ₹{{ plan.expenses }}. Left to split: <strong>₹{{ plan.remaining }}</strong>.</p>
-        <p>Your safety net covers {{ plan.months }} months of expenses.</p>
-        <p>{{ plan.reason }}</p>
-        <ul>
-        {% for label, share, amount in plan.rows %}
-            <li>{{ label }}: {{ share }}% of what is left (₹{{ amount }})</li>
-        {% endfor %}
-        </ul>
-        <p>This is a simple rule-based guideline for learning, not professional financial advice.</p>
+        {% if plan %}
+        <div class="strip">
+            <div class="metric"><span class="m-label">Income</span><span class="m-value">₹{{ '%.0f'|format(plan.income) }}</span><span class="m-unit">per month</span></div>
+            <div class="metric"><span class="m-label">Essentials</span><span class="m-value">₹{{ '%.0f'|format(plan.expenses) }}</span><span class="m-unit">per month</span></div>
+            <div class="metric"><span class="m-label">Left to split</span><span class="m-value">₹{{ '%.0f'|format(plan.remaining) }}</span><span class="m-unit">per month</span></div>
+            <div class="metric"><span class="m-label">Reserve</span><span class="m-value">{{ plan.months }}</span><span class="m-unit">months</span></div>
+        </div>
+        <div class="panel">
+            <h2>Allocation of what is left</h2>
+            {% for label, share, amount in plan.rows %}
+                <div class="bar-row">
+                    <div class="bar-label"><span>{{ label }}</span><span>{{ share }}% (₹{{ amount }})</span></div>
+                    <div class="dbar"><div class="dfill" style="width: {{ share }}%"></div></div>
+                </div>
+            {% endfor %}
+            <p class="note">{{ plan.reason }}</p>
+        </div>
+        <p class="note">This is a simple rule-based guideline for learning, not professional financial advice.</p>
         <p><a href="{{ url_for('finance_progress') }}">Track this month's progress</a></p>
     {% endif %}
 

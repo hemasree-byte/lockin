@@ -1,19 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Lockin - Your Meals</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
+    <meta charset="UTF-8">
+    <title>Lockin - Your Meal Plan</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Which meals would you like us to plan for you?</h1>
-    <p>After finishing sign up, you'll be able to edit your meals, add new ones, and adjust settings in more detail.</p>
-    <form method="POST">
-        <label><input type="checkbox" name="meals" value="breakfast" checked> Breakfast</label><br>
-        <label><input type="checkbox" name="meals" value="lunch" checked> Lunch</label><br>
-        <label><input type="checkbox" name="meals" value="dinner" checked> Dinner</label><br>
-        <label><input type="checkbox" name="meals" value="snack" checked> Snack</label><br>
-        <button type="submit">Next</button>
-    </form>
+    <nav class="topnav">
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    </nav>
+    <h1>Your meal suggestions</h1>
+
+    {% if target_kcal %}
+    <div class="strip">
+        <div class="metric"><span class="m-label">Daily target</span><span class="m-value">{{ target_kcal }}</span><span class="m-unit">kcal</span></div>
+        <div class="metric"><span class="m-label">Protein target</span><span class="m-value">{{ target_protein }}</span><span class="m-unit">g</span></div>
+    </div>
+    {% endif %}
+
+    {% for meal, foods in plan.items() %}
+        <div class="panel">
+            <h2>{{ meal|capitalize }}</h2>
+            {% if foods %}
+                {% for food in foods %}
+                    <div class="bar-row">
+                        <div class="bar-label"><span>{{ food.name }}</span><span>{{ food.kcal }} kcal, {{ food.protein }} g protein</span></div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No foods match your diet and allergies for this meal yet.</p>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <p class="note">Calories and protein are approximate values for one serving.</p>
+    <p><a href="{{ url_for('dashboard') }}">Back to dashboard</a></p>
 </body>
 </html>

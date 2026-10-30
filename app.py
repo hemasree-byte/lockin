@@ -280,22 +280,22 @@ DIET_EXCLUSIONS = {
 ALLERGENS = ['dairy', 'eggs', 'gluten', 'peanuts', 'sesame', 'shellfish', 'soy', 'tree nuts']
 
 FOODS = [
-    {'name': 'Oatmeal with banana', 'meal': 'breakfast', 'contains': []},
-    {'name': 'Scrambled eggs on toast', 'meal': 'breakfast', 'contains': ['eggs', 'gluten']},
-    {'name': 'Fruit smoothie with yogurt', 'meal': 'breakfast', 'contains': ['dairy']},
-    {'name': 'Peanut butter sandwich', 'meal': 'breakfast', 'contains': ['peanuts', 'gluten']},
-    {'name': 'Vegetable salad bowl', 'meal': 'lunch', 'contains': []},
-    {'name': 'Chicken wrap', 'meal': 'lunch', 'contains': ['gluten', 'meat']},
-    {'name': 'Rice with dal', 'meal': 'lunch', 'contains': []},
-    {'name': 'Paneer rice bowl', 'meal': 'lunch', 'contains': ['dairy']},
-    {'name': 'Grilled vegetables with quinoa', 'meal': 'dinner', 'contains': []},
-    {'name': 'Fish curry with rice', 'meal': 'dinner', 'contains': ['fish']},
-    {'name': 'Veg pasta', 'meal': 'dinner', 'contains': ['gluten']},
-    {'name': 'Tofu stir fry', 'meal': 'dinner', 'contains': ['soy', 'sesame']},
-    {'name': 'Mixed fruit bowl', 'meal': 'snack', 'contains': []},
-    {'name': 'Roasted almonds', 'meal': 'snack', 'contains': ['tree nuts']},
-    {'name': 'Greek yogurt cup', 'meal': 'snack', 'contains': ['dairy']},
-    {'name': 'Peanut chikki', 'meal': 'snack', 'contains': ['peanuts']},
+    {'name': 'Oatmeal with banana', 'meal': 'breakfast', 'contains': [], 'kcal': 320, 'protein': 9},
+    {'name': 'Scrambled eggs on toast', 'meal': 'breakfast', 'contains': ['eggs', 'gluten'], 'kcal': 380, 'protein': 20},
+    {'name': 'Fruit smoothie with yogurt', 'meal': 'breakfast', 'contains': ['dairy'], 'kcal': 280, 'protein': 10},
+    {'name': 'Peanut butter sandwich', 'meal': 'breakfast', 'contains': ['peanuts', 'gluten'], 'kcal': 420, 'protein': 15},
+    {'name': 'Vegetable salad bowl', 'meal': 'lunch', 'contains': [], 'kcal': 250, 'protein': 8},
+    {'name': 'Chicken wrap', 'meal': 'lunch', 'contains': ['gluten', 'meat'], 'kcal': 520, 'protein': 32},
+    {'name': 'Rice with dal', 'meal': 'lunch', 'contains': [], 'kcal': 480, 'protein': 16},
+    {'name': 'Paneer rice bowl', 'meal': 'lunch', 'contains': ['dairy'], 'kcal': 580, 'protein': 24},
+    {'name': 'Grilled vegetables with quinoa', 'meal': 'dinner', 'contains': [], 'kcal': 450, 'protein': 15},
+    {'name': 'Fish curry with rice', 'meal': 'dinner', 'contains': ['fish'], 'kcal': 560, 'protein': 30},
+    {'name': 'Veg pasta', 'meal': 'dinner', 'contains': ['gluten'], 'kcal': 520, 'protein': 16},
+    {'name': 'Tofu stir fry', 'meal': 'dinner', 'contains': ['soy', 'sesame'], 'kcal': 400, 'protein': 22},
+    {'name': 'Mixed fruit bowl', 'meal': 'snack', 'contains': [], 'kcal': 150, 'protein': 2},
+    {'name': 'Roasted almonds', 'meal': 'snack', 'contains': ['tree nuts'], 'kcal': 170, 'protein': 6},
+    {'name': 'Greek yogurt cup', 'meal': 'snack', 'contains': ['dairy'], 'kcal': 140, 'protein': 12},
+    {'name': 'Peanut chikki', 'meal': 'snack', 'contains': ['peanuts'], 'kcal': 190, 'protein': 5},
 ]
 
 
@@ -526,6 +526,11 @@ def meal_plan():
             (user_id,)
         )
         row = cursor.fetchone()
+        try:
+            cursor.execute("SELECT calories, protein_g FROM nutrition_targets WHERE user_id = ?", (user_id,))
+            target = cursor.fetchone()
+        except sqlite3.OperationalError:
+            target = None
     finally:
         connection.close()
 
@@ -546,7 +551,11 @@ def meal_plan():
             if food['meal'] == meal and not (set(food['contains']) & blocked)
         ]
 
-    return render_template('meal_plan.html', plan=plan)
+    target_kcal = round(float(target[0])) if target and target[0] else None
+    target_protein = round(float(target[1])) if target and target[1] else None
+
+    return render_template('meal_plan.html', plan=plan,
+                           target_kcal=target_kcal, target_protein=target_protein)
 
 
 # ---------------------------------------------------------------
