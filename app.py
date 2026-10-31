@@ -956,6 +956,114 @@ def standing():
     ]
     return render_template('standing.html', cards=cards)
 
+@app.route('/trading_risk', methods=['GET', 'POST'])
+def trading_risk():
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login'))
+
+    error = None
+    result = None
+
+    if request.method == 'POST':
+        try:
+            capital = float(request.form.get('capital'))
+            risk_pct = float(request.form.get('risk_pct'))
+            losses = int(request.form.get('losses'))
+        except (TypeError, ValueError):
+            error = 'Please enter numbers only.'
+        else:
+            if capital <= 0:
+                error = 'Trading capital must be more than 0.'
+            elif risk_pct <= 0 or risk_pct > 100:
+                error = 'Risk per trade must be between 0 and 100 percent.'
+            elif losses < 1:
+                error = 'Losses in a row must be at least 1.'
+
+        if error is None:
+            max_loss = capital * risk_pct / 100
+            remaining = capital * (1 - risk_pct / 100) ** losses
+            lost = capital - remaining
+            result = {
+                'max_loss': round(max_loss, 2),
+                'losses': losses,
+                'remaining': round(remaining, 2),
+                'lost': round(lost, 2),
+                'lost_pct': round(lost / capital * 100, 1),
+            }
+
+    suggested = None
+    connection = sqlite3.connect('database.db')
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT monthly_income, trading_pct FROM finance_split WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        if row and row[0] is not None and row[1] is not None:
+            suggested = row[0] * row[1] / 100
+    except sqlite3.OperationalError:
+        suggested = None
+    finally:
+        connection.close()
+
+    return render_template('trading_risk.html', error=error, result=result, suggested=suggested)
+
+DOCUMENTS = [
+    ('aadhaar', 'Aadhaar', 'Identity', 'Identity and address proof used for many services.', 'https://uidai.gov.in/'),
+    ('pan', 'PAN card', 'Identity and finance', 'Needed for tax filing and many financial activities.', 'https://www.incometax.gov.in/'),
+    ('voter_id', 'Voter ID (EPIC)', 'Civic', 'For eligible citizens aged 18 or above who want to vote.', 'https://voters.eci.gov.in/'),
+    ('bank_account', 'Bank account', 'Finance', 'An account to receive and manage your money.', None),
+    ('driving_licence', 'Driving licence', 'Transport', 'Needed to drive a vehicle legally. Eligibility rules apply.', 'https://parivahan.gov.in/'),
+    ('passport', 'Passport', 'Travel', 'Needed for international travel. Not required for everyone.', 'https://www.passportindia.gov.in/'),
+]
+
+STATUSES = ['Not applied', 'Pending', 'Issued', 'Needs updating', 'Not applicable']
+
+
+@app.route('/documents', methods=['GET', 'POST'])
+def documents():
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        connection = sqlite3.connect('database.db')
+        try:
+            cursor = connection.cursor()
+            for key, name, category, description, url in DOCUMENTS:
+                status = request.form.get('status_' + key)
+                if status not in STATUSES:
+                    status = 'Not applied'
+                cursor.execute(
+                    "INSERT OR REPLACE INTO user_documents (user_id, doc_key, status) VALUES (?, ?, ?)",
+                    (user_id, key, status)
+                )
+            connection.commit()
+        finally:
+            connection.close()
+        return redirect(url_for('documents'))
+
+    saved = {}
+    connection = sqlite3.connect('database.db')
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT doc_key, status, updated_at FROM user_documents WHERE user_id = ?", (user_id,))
+        saved = {key: (status, updated) for key, status, updated in cursor.fetchall()}
+    except sqlite3.OperationalError:
+        saved = {}
+    finally:
+        connection.close()
+
+    rows = []
+    counts = {s: 0 for s in STATUSES}
+    for key, name, category, description, url in DOCUMENTS:
+        status, updated = saved.get(key, ('Not applied', None))
+        counts[status] = counts.get(status, 0) + 1
+        rows.append({'key': key, 'name': name, 'category': category,
+                     'description': description, 'url': url,
+                     'status': status, 'updated': updated})
+
+    return render_template('documents.html', rows=rows, statuses=STATUSES, counts=counts)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

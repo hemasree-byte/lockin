@@ -100,6 +100,15 @@ CREATE TABLE IF NOT EXISTS finance_safety (
     emergency_savings REAL
 )
 ''')
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS user_documents (
+    user_id INTEGER REFERENCES users(user_id),
+    doc_key TEXT,
+    status TEXT,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, doc_key)
+)
+''')
 
 connection.commit()
 connection.close()

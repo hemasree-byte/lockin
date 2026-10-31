@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Lockin - Documents</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Documents checklist</h1>
+    <p>Keep track of the important documents for adult life. Not every document is needed by everyone.</p>
+
+    <div class="strip">
+        <div class="metric"><span class="m-label">Issued</span><span class="m-value">{{ counts.get('Issued', 0) }}</span></div>
+        <div class="metric"><span class="m-label">Pending</span><span class="m-value">{{ counts.get('Pending', 0) }}</span></div>
+        <div class="metric"><span class="m-label">Not applied</span><span class="m-value">{{ counts.get('Not applied', 0) }}</span></div>
+        <div class="metric"><span class="m-label">Needs updating</span><span class="m-value">{{ counts.get('Needs updating', 0) }}</span></div>
+    </div>
+
+    <form method="POST">
+        {% for d in rows %}
+            <div class="panel">
+                <h2>{{ d.name }}</h2>
+                <p class="note">{{ d.category }}</p>
+                <p>{{ d.description }}</p>
+                {% if d.url %}
+                    <p><a href="{{ d.url }}" target="_blank" rel="noopener noreferrer">Official website</a></p>
+                {% endif %}
+                <label>Your status</label>
+                <select name="status_{{ d.key }}">
+                    {% for s in statuses %}
+                        <option value="{{ s }}" {% if d.status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+                {% if d.updated %}
+                    <p class="note">Last updated: {{ d.updated }}</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit">Save my checklist</button>
+    </form>
+
+    <p><a href="{{ url_for('dashboard') }}">Back to dashboard</a></p>
+</body>
+</html>

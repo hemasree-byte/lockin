@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Lockin - Trading risk</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Understand your risk</h1>
+    <p>Before you trade, see how much one trade can cost you, and what a bad run does to your capital.</p>
+
+    {% if error %}
+        <p style="color:#b3261e"><strong>{{ error }}</strong></p>
+    {% endif %}
+
+    {% if suggested is not none %}
+        {% if suggested > 0 %}
+            <p class="note">Your money plan puts about ₹{{ '%.0f'|format(suggested) }} a month into trading capital.</p>
+        {% else %}
+            <p class="note">Your money plan puts ₹0 into trading for now, because your safety net comes first.</p>
+        {% endif %}
+    {% endif %}
+
+    <form method="POST">
+        <label>Trading capital (₹):</label>
+        <input type="number" name="capital" step="0.01" min="0" required>
+
+        <label>Risk per trade (%):</label>
+        <input type="number" name="risk_pct" step="0.05" min="0.05" max="100" value="1" required>
+
+        <label>Losses in a row:</label>
+        <select name="losses">
+            <option value="1">1</option>
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="10">10</option>
+        </select>
+
+        <button type="submit">Calculate</button>
+    </form>
+
+    {% if result %}
+        <h2>Your result</h2>
+        <p>The most you plan to lose on one trade: <strong>₹{{ result.max_loss }}</strong> (capital × risk %).</p>
+        <p>After {{ result.losses }} losses in a row, your capital would be about <strong>₹{{ result.remaining }}</strong>. That is ₹{{ result.lost }} lost ({{ result.lost_pct }}% of your capital).</p>
+        <p class="note">These numbers are illustrative. Real losses can be larger because of price gaps, slippage, leverage and mistakes. Trading can lose money. This is for learning, not advice.</p>
+    {% endif %}
+
+    <p><a href="{{ url_for('finance_plan') }}">Back to money plan</a></p>
+    <p><a href="{{ url_for('dashboard') }}">Back to dashboard</a></p>
+</body>
+</html>
